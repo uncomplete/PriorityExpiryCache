@@ -32,91 +32,38 @@ class NotFoundException: public exception
   }
 } NotFound;
 
-// Define a concept that PriorityExpiryCache requires
-
-template<class K, class T>
-class index_min_pq {
-    public:
-        index_min_pq() : n(0) {
-            pq.push_back(0);
-            keys[K()] = 0;
-            _keys[0] = K();
-        };
-
-        T top() { return n>0 ? pq[1] : T(); };
-
-        K top_key() { return n>0 ? _keys[1] : K(); };
-
-        void pop() {
-            if(n==0) return;
-            exch(1, n--);
-            sink(1);
-            pq.pop_back();
-            keys.erase(_keys[n+1]);
-            _keys.erase(n+1);
-        }
-
-        void push(K s, T exp) {
-            pq.push_back(exp);
-            keys.emplace(s, ++n);
-            _keys.emplace(n, s);
-            swim(n);
-        }
-
-        void remove(K s) {
-            auto ind = keys[s];
-            exch(ind, n--);
-            swim(ind);
-            sink(ind);
-            pq.pop_back();
-            keys.erase(s);
-            _keys.erase(n+1);
-        }
-
-        void print() {
-            cout << n << " ";
-            for(int i=1;i<=n;i++)
-                cout << pq[i] << " ";
-            cout << "\n";
-        }
-
-        bool empty() { return n == 0; }
-
-    private:
-        unordered_map<K, size_t> keys;
-        unordered_map<size_t, K> _keys;
-        vector<T> pq;
-        size_t n;
-
-        bool greater(size_t i, size_t j) {
-            return pq[i] > pq[j];
-        }
-
-        void exch(size_t i, size_t j) {
-            K& si = _keys[i];
-            K& sj = _keys[j];
-            std::swap(keys[si], keys[sj]);
-            std::swap(si, sj);
-            std::swap(pq[i], pq[j]);
-        }
-
-        void swim(size_t k) {
-            while (k > 1 && greater(k/2, k)) {
-                exch(k, k/2);
-                k = k/2;
-            }
-        }
-
-        void sink(size_t k) {
-            while (2*k <= n) {
-                size_t j = 2*k;
-                if (j < n && greater(j, j+1)) j++;
-                if (!greater(k, j)) break;
-                exch(k, j);
-                k = j;
-            }
-        }
+template<typename T, class Container=std::vector<T>, class Compare=std::less<typename Container::value_type>>
+class custom_priority_queue : public std::priority_queue<T, Container, Compare>
+{
+public:
+  bool remove(const T& value) {
+    auto it = std::find(this->c.begin(), this->c.end(), value);
+    if (it != this->c.end()) {
+      this->c.erase(it);
+      std::make_heap(this->c.begin(), this->c.end(), this->comp);
+      return true;
+    } else {
+      return false;
+    }
+  }
 };
+
+struct ExpireNode {
+  ExpireNode(ctime_t exp, ckey_t k) : expire(exp), key(k) {};
+  ctime_t expire;
+  ckey_t key;
+};
+
+bool operator==(const ExpireNode& n1, const ExpireNode& n2) {
+  return n1.expire==n2.expire && n1.key==n2.key;
+}
+
+bool operator>(const ExpireNode &n1, const ExpireNode &n2) {
+  //return n1.expiry > n2.expiry;
+  return n1.expire == n2.expire ?
+         n1.key > n2.key :
+         n1.expire > n2.expire;
+}
 
 struct Item {
   Item(ckey_t key, cval_t val, cprio_t prio, ctime_t exp) : 
@@ -129,13 +76,13 @@ struct Item {
 
 struct PriorityExpiryCache {
   PriorityExpiryCache(size_t maxItems) : _maxItems(maxItems) {
-    cout << "Using Indexed Priority Queue\n";
+    cout << "Using Regular Priority Queue\n";
   }
 
   ctime_t _time;
   size_t _maxItems;
 
-  index_min_pq<ckey_t, ctime_t> exp_q;
+  custom_priority_queue<ExpireNode, vector<ExpireNode>, greater<ExpireNode>> exp_q;
   map<cprio_t, list<Item>> priority_map;
   unordered_map<ckey_t, list<Item>::iterator> key_map;
 
@@ -177,8 +124,8 @@ struct PriorityExpiryCache {
 
   void evictItem() {
     if( this->empty()) return;
-    if( exp_q.top() < _time) {
-        auto k = exp_q.top_key();
+    if( exp_q.top().expire < _time) {
+        auto k = exp_q.top().key;
         exp_q.pop();
         auto liter = key_map[k];
         auto prio = liter->priority;
@@ -190,7 +137,7 @@ struct PriorityExpiryCache {
         auto prio = prioIter->first;
         auto &plist = prioIter->second;
         auto k = plist.back().key;
-        exp_q.remove(k);
+        exp_q.remove(ExpireNode(plist.back().expire, k));
         key_map.erase(k);
         if( plist.size() == 1) priority_map.erase(prio);
         else plist.pop_back();
@@ -202,7 +149,7 @@ struct PriorityExpiryCache {
     else if (key_map.size() == _maxItems) evictItem();
     priority_map[priority].emplace_front(key, value, priority, expire);
     key_map[key] = priority_map[priority].begin();
-    exp_q.push(key, expire);
+    exp_q.emplace(expire, key);
   }
 
   void SetMaxItems(size_t maxItems) {

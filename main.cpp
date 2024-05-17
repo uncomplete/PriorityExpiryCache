@@ -18,7 +18,7 @@
 using namespace std;
 
 void printKeys(PriorityExpiryCache* c) {
-    for(auto s : c->Keys())
+    for(const auto& s : c->Keys())
         cout << s << " ";
     cout << "\n";
 }
