@@ -14,10 +14,11 @@
 #include <unistd.h>
 
 #include "indexed_pq.hpp"
+#include "basic_pq.hpp"
 
 using namespace std;
 
-void printKeys(PriorityExpiryCache* c) {
+void printKeys(PriorityExpiryCache& c) {
     for(const auto& s : c->Keys())
         cout << s << " ";
     cout << "\n";
@@ -41,7 +42,7 @@ std::string gen_random(const int len) {
     return tmp_s;
 }
 
-void test2(PriorityExpiryCache* c, size_t n, size_t cn) {
+void test2(PriorityExpiryCache& c, size_t n, size_t cn) {
     auto start = chrono::high_resolution_clock::now();
 
     c->ResetTime();

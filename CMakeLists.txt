@@ -1,18 +1,13 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(proj VERSION 1.0)
+project(PriorityExpiryCache VERSION 1.0)
 
-# specify the C++ standard
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+find_package(Boost 1.71.0)
+include_directories(${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Set gdb
-SET(CMAKE_BUILD_TYPE "Release")
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+set(CMAKE_CXX_STANDARD 23)
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
-add_compile_options(-std=c++17)
+add_executable(tests tests/test_cache.cpp)
 
-add_executable(regular main.cpp)
-
-add_executable(indexed main.cpp)
-target_compile_definitions(indexed PUBLIC INDEX)
+#add_executable(main main.cpp)

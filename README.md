@@ -1,5 +1,7 @@
 # Priority-Expiry Cache
 
+This was originally an interview project from a company that I applied to.
+
 A general cache is often a fixed-size container for a set of key-value pairs.  
 Pairs, or items, can be added to the cache, up to it's fixed size n, and the cache can be queried for values using keys.  
 Once the n+1 item is added an existing item must be evicted in order to make room for the n+1 item.  
